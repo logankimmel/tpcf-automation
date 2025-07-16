@@ -3,15 +3,24 @@
 set -e
 
 load_all_pages() {
-  # from https://gist.github.com/fj/6784d4e53d72dc4a33b678807fdd8589
+  # based on from https://gist.github.com/fj/6784d4e53d72dc4a33b678807fdd8589
+  # modified to work with the v3 API
 
   URL="${1}"
   DATA=""
-  until [ "${URL}" == "null" ]; do
-      RESP=$(cf curl "${URL}")
-      DATA+=$(echo "${RESP}" | jq .resources)
-      URL=$(echo "${RESP}" | jq -r .next_url)
+  until [ "${URL}" == "null" ]
+  do
+    RESP=$(cf curl "${URL}")
+    DATA+=$(echo "${RESP}" | jq .resources)
+    URL=$(echo "${RESP}" | jq -r .pagination.next.href)
+
+    # strip off domain if next page set so cf curl can handle it
+    if [ "${URL}" != "null" ]
+    then
+      URL="/$(echo "${URL}" | cut -d '/' -f4-)"
+    fi
   done
+
   # dump the data
   echo "${DATA}" | jq .[] | jq -s
 }
